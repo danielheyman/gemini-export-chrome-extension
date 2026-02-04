@@ -85,7 +85,7 @@ clearCacheBtn.addEventListener('click', () => {
   }
 });
 
-// Listen for progress updates
+// Listen for progress and cache updates
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'PROGRESS_UPDATE') {
     const { current, total, status } = msg.progress;
@@ -101,5 +101,9 @@ chrome.runtime.onMessage.addListener((msg) => {
       progressBar.style.width = status.startsWith('Done!') ? '100%' : '0%';
       loadCacheStats(); // Refresh cache count
     }
+  }
+  
+  if (msg.type === 'CACHE_UPDATE') {
+    cacheInfo.textContent = `📦 ${msg.count} chats cached locally`;
   }
 });

@@ -106,7 +106,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   
   if (request.action === 'CACHE_CHAT') {
-    cacheChat(request.chat).then(() => sendResponse({ cached: true }));
+    cacheChat(request.chat).then(async () => {
+      // Broadcast updated cache count
+      const allCached = await getAllCached();
+      chrome.runtime.sendMessage({ type: 'CACHE_UPDATE', count: allCached.length }).catch(() => {});
+      sendResponse({ cached: true });
+    });
     return true;
   }
   
