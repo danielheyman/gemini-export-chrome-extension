@@ -142,19 +142,24 @@
       sendProgress(i + 1, toFetch.length, `Fetching ${i + 1}/${toFetch.length}: ${chat.title.substring(0, 30)}...`);
       
       chat.element.click();
-      await sleep(2000); // Slightly longer to capture API response
+      await sleep(2000); // Wait for API response with timestamps
       
       const messages = extractMessages();
       const timestamp = getTimestampForChat(chat.id);
       
-      exportedChats.push({
+      const chatData = {
         id: chat.id,
         title: chat.title,
         url: chat.url,
         createdAt: timestamp ? new Date(timestamp).toISOString() : null,
         exportedAt: new Date().toISOString(),
         messages: messages
-      });
+      };
+      
+      exportedChats.push(chatData);
+      
+      // Cache immediately after each chat (crash protection)
+      chrome.runtime.sendMessage({ action: 'CACHE_CHAT', chat: chatData }).catch(() => {});
       
       await sleep(400);
     }

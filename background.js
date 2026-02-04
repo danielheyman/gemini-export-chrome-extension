@@ -99,6 +99,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
+  if (request.action === 'CACHE_CHAT') {
+    cacheChat(request.chat).then(() => sendResponse({ cached: true }));
+    return true;
+  }
+  
   return true;
 });
 
