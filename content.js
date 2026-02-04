@@ -5,105 +5,24 @@
   if (window.__geminiExportLoaded) return;
   window.__geminiExportLoaded = true;
   
-  console.log('[Gemini Export] Content script ready');
-  
-  // Timestamp cache: maps conversation ID to timestamp
+  // Timestamp cache
   const timestampCache = new Map();
   
-  // Install fetch interceptor to capture API responses
-  const originalFetch = window.fetch;
-  window.fetch = async function(...args) {
-    const response = await originalFetch.apply(this, args);
-    const url = args[0]?.url || args[0] || '';
-    
-    if (url.includes('batchexecute') || url.includes('conversation')) {
-      try {
-        const clone = response.clone();
-        const text = await clone.text();
-        parseTimestampsFromResponse(text, getCurrentChatId());
-      } catch (e) {}
+  // Listen for timestamps from page context
+  window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+    if (event.data?.type === 'GEMINI_TIMESTAMP') {
+      timestampCache.set(event.data.chatId, event.data.timestamp);
     }
-    
-    return response;
-  };
+  });
   
-  // Also intercept XHR
-  const originalXHROpen = XMLHttpRequest.prototype.open;
-  const originalXHRSend = XMLHttpRequest.prototype.send;
-  
-  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-    this._geminiUrl = url;
-    return originalXHROpen.call(this, method, url, ...rest);
-  };
-  
-  XMLHttpRequest.prototype.send = function(...args) {
-    if (this._geminiUrl && (this._geminiUrl.includes('batchexecute') || this._geminiUrl.includes('conversation'))) {
-      this.addEventListener('load', function() {
-        try {
-          parseTimestampsFromResponse(this.responseText, getCurrentChatId());
-        } catch (e) {}
-      });
-    }
-    return originalXHRSend.apply(this, args);
-  };
-  
-  function getCurrentChatId() {
-    const match = window.location.href.match(/\/app\/([a-f0-9]+)/);
-    return match ? match[1] : null;
-  }
-  
-  function parseTimestampsFromResponse(text, currentChatId) {
-    // Look for timestamp patterns: [seconds, nanos] where seconds is 10 digits starting with 17
-    const timestampRegex = /\[(\d{10}),\s*(\d+)\]/g;
-    const convIdRegex = /c_([a-f0-9]{16})/g;
-    
-    // Extract all timestamps
-    const timestamps = [];
-    let match;
-    while ((match = timestampRegex.exec(text)) !== null) {
-      const seconds = parseInt(match[1]);
-      // Sanity check: should be a reasonable Unix timestamp (2020-2030)
-      if (seconds > 1577836800 && seconds < 1893456000) {
-        timestamps.push(seconds * 1000);
-      }
-    }
-    
-    // Extract conversation IDs from response
-    const convIds = [];
-    while ((match = convIdRegex.exec(text)) !== null) {
-      convIds.push(match[1]);
-    }
-    
-    // Get the earliest timestamp (likely creation time)
-    if (timestamps.length > 0) {
-      const ts = Math.min(...timestamps);
-      
-      // Map to API conversation IDs
-      for (const id of convIds) {
-        if (!timestampCache.has(id)) {
-          timestampCache.set(id, ts);
-          console.log(`[Gemini Export] Captured timestamp for c_${id}: ${new Date(ts).toISOString()}`);
-        }
-      }
-      
-      // Also map to current URL-based chat ID if available
-      if (currentChatId && !timestampCache.has(currentChatId)) {
-        timestampCache.set(currentChatId, ts);
-        console.log(`[Gemini Export] Captured timestamp for ${currentChatId}: ${new Date(ts).toISOString()}`);
-      }
-    }
-  }
+  // Inject interceptor into page context (external file bypasses CSP)
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('injected.js');
+  (document.head || document.documentElement).appendChild(script);
   
   function getTimestampForChat(chatId) {
-    // Try direct match
-    if (timestampCache.has(chatId)) {
-      return timestampCache.get(chatId);
-    }
-    // Try with c_ prefix stripped/added
-    if (timestampCache.has('c_' + chatId)) {
-      return timestampCache.get('c_' + chatId);
-    }
-    return null;
+    return timestampCache.get(chatId) || null;
   }
   
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

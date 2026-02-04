@@ -32,7 +32,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["jszip.min.js"],
+      "resources": ["jszip.min.js", "injected.js"],
       "matches": ["https://gemini.google.com/*"]
     }
   ]
