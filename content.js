@@ -7,6 +7,105 @@
   
   console.log('[Gemini Export] Content script ready');
   
+  // Timestamp cache: maps conversation ID to timestamp
+  const timestampCache = new Map();
+  
+  // Install fetch interceptor to capture API responses
+  const originalFetch = window.fetch;
+  window.fetch = async function(...args) {
+    const response = await originalFetch.apply(this, args);
+    const url = args[0]?.url || args[0] || '';
+    
+    if (url.includes('batchexecute') || url.includes('conversation')) {
+      try {
+        const clone = response.clone();
+        const text = await clone.text();
+        parseTimestampsFromResponse(text, getCurrentChatId());
+      } catch (e) {}
+    }
+    
+    return response;
+  };
+  
+  // Also intercept XHR
+  const originalXHROpen = XMLHttpRequest.prototype.open;
+  const originalXHRSend = XMLHttpRequest.prototype.send;
+  
+  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+    this._geminiUrl = url;
+    return originalXHROpen.call(this, method, url, ...rest);
+  };
+  
+  XMLHttpRequest.prototype.send = function(...args) {
+    if (this._geminiUrl && (this._geminiUrl.includes('batchexecute') || this._geminiUrl.includes('conversation'))) {
+      this.addEventListener('load', function() {
+        try {
+          parseTimestampsFromResponse(this.responseText, getCurrentChatId());
+        } catch (e) {}
+      });
+    }
+    return originalXHRSend.apply(this, args);
+  };
+  
+  function getCurrentChatId() {
+    const match = window.location.href.match(/\/app\/([a-f0-9]+)/);
+    return match ? match[1] : null;
+  }
+  
+  function parseTimestampsFromResponse(text, currentChatId) {
+    // Look for timestamp patterns: [seconds, nanos] where seconds is 10 digits starting with 17
+    const timestampRegex = /\[(\d{10}),\s*(\d+)\]/g;
+    const convIdRegex = /c_([a-f0-9]{16})/g;
+    
+    // Extract all timestamps
+    const timestamps = [];
+    let match;
+    while ((match = timestampRegex.exec(text)) !== null) {
+      const seconds = parseInt(match[1]);
+      // Sanity check: should be a reasonable Unix timestamp (2020-2030)
+      if (seconds > 1577836800 && seconds < 1893456000) {
+        timestamps.push(seconds * 1000);
+      }
+    }
+    
+    // Extract conversation IDs from response
+    const convIds = [];
+    while ((match = convIdRegex.exec(text)) !== null) {
+      convIds.push(match[1]);
+    }
+    
+    // Get the earliest timestamp (likely creation time)
+    if (timestamps.length > 0) {
+      const ts = Math.min(...timestamps);
+      
+      // Map to API conversation IDs
+      for (const id of convIds) {
+        if (!timestampCache.has(id)) {
+          timestampCache.set(id, ts);
+          console.log(`[Gemini Export] Captured timestamp for c_${id}: ${new Date(ts).toISOString()}`);
+        }
+      }
+      
+      // Also map to current URL-based chat ID if available
+      if (currentChatId && !timestampCache.has(currentChatId)) {
+        timestampCache.set(currentChatId, ts);
+        console.log(`[Gemini Export] Captured timestamp for ${currentChatId}: ${new Date(ts).toISOString()}`);
+      }
+    }
+  }
+  
+  function getTimestampForChat(chatId) {
+    // Try direct match
+    if (timestampCache.has(chatId)) {
+      return timestampCache.get(chatId);
+    }
+    // Try with c_ prefix stripped/added
+    if (timestampCache.has('c_' + chatId)) {
+      return timestampCache.get('c_' + chatId);
+    }
+    return null;
+  }
+  
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'RUN_EXPORT') {
       runExport(request.forceRefresh, request.cachedIds || []).then(result => {
@@ -124,14 +223,16 @@
       sendProgress(i + 1, toFetch.length, `Fetching ${i + 1}/${toFetch.length}: ${chat.title.substring(0, 30)}...`);
       
       chat.element.click();
-      await sleep(1800);
+      await sleep(2000); // Slightly longer to capture API response
       
       const messages = extractMessages();
+      const timestamp = getTimestampForChat(chat.id);
       
       exportedChats.push({
         id: chat.id,
         title: chat.title,
         url: chat.url,
+        createdAt: timestamp ? new Date(timestamp).toISOString() : null,
         exportedAt: new Date().toISOString(),
         messages: messages
       });

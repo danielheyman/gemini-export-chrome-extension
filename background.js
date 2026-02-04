@@ -222,7 +222,11 @@ function getTimestamp() {
 }
 
 function toMarkdown(chat) {
-  let md = `# ${chat.title}\n\n> Exported: ${chat.exportedAt}\n> URL: ${chat.url}\n\n---\n\n`;
+  let md = `# ${chat.title}\n\n`;
+  if (chat.createdAt) {
+    md += `> Created: ${chat.createdAt}\n`;
+  }
+  md += `> Exported: ${chat.exportedAt}\n> URL: ${chat.url}\n\n---\n\n`;
   for (const msg of chat.messages || []) {
     md += msg.role === 'user' ? `## 👤 User\n\n${msg.content}\n\n` : `## 🤖 Gemini\n\n${msg.content}\n\n`;
     md += `---\n\n`;

@@ -5,6 +5,7 @@ Chrome extension to export all your Google Gemini chats to JSON and Markdown fil
 ## Features
 
 - **Bulk Export** — Export all chats with one click
+- **Conversation Timestamps** — Captures creation dates from API responses
 - **Incremental** — Only fetches new chats (caches previously exported)
 - **Multiple Formats** — JSON, Markdown, or both
 - **No Rate Limiting** — Uses single-tab click navigation
@@ -51,6 +52,7 @@ Subsequent exports only fetch new/uncached chats — much faster!
   "id": "abc123",
   "title": "Chat Title",
   "url": "https://gemini.google.com/app/abc123",
+  "createdAt": "2024-02-03T07:21:34.000Z",
   "exportedAt": "2024-02-04T12:00:00.000Z",
   "messages": [
     { "role": "user", "content": "Hello!" },
@@ -63,6 +65,7 @@ Subsequent exports only fetch new/uncached chats — much faster!
 ```markdown
 # Chat Title
 
+> Created: 2024-02-03T07:21:34.000Z
 > Exported: 2024-02-04T12:00:00.000Z
 > URL: https://gemini.google.com/app/abc123
 
