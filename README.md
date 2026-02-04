@@ -1,70 +1,86 @@
 # Gemini Chat Exporter
 
-Chrome extension to export all your Gemini conversations to local files.
+Chrome extension to export all your Google Gemini chats to JSON and Markdown files.
+
+## Features
+
+- **Bulk Export** — Export all chats with one click
+- **Incremental** — Only fetches new chats (caches previously exported)
+- **Multiple Formats** — JSON, Markdown, or both
+- **No Rate Limiting** — Uses single-tab click navigation
+- **Progress Tracking** — See real-time export progress
 
 ## Installation
 
-1. Open Chrome and go to `chrome://extensions`
-2. Enable **Developer mode** (top right toggle)
-3. Click **Load unpacked**
-4. Select this folder: `/Users/danielheyman/.openclaw/workspace/chrome-extensions/gemini-export`
+1. Clone or download this repository
+2. Open Chrome and go to `chrome://extensions`
+3. Enable "Developer mode" (top right)
+4. Click "Load unpacked"
+5. Select the extension folder
 
 ## Usage
 
-1. Go to [gemini.google.com](https://gemini.google.com/app)
-2. You'll see a blue **📥 Export All Chats** button in the bottom-right corner
-3. Click it to start the export
-4. The extension will:
-   - Loop through each chat in your sidebar
-   - Extract the conversation content
-   - Download two files:
-     - `gemini-export-YYYY-MM-DD.json` (structured data)
-     - `gemini-export-YYYY-MM-DD.md` (readable markdown)
+1. Open [Gemini](https://gemini.google.com)
+2. Make sure the sidebar is visible (shows your chat list)
+3. Scroll down in the sidebar to load all chats you want to export
+4. Click the extension icon in the toolbar
+5. Choose your format and click "Export All Chats"
+6. Wait for the export to complete — a ZIP file will download
+
+## Options
+
+- **Export Format**: JSON + Markdown, JSON only, or Markdown only
+- **Force Refresh**: Re-fetch all chats even if cached
+- **Clear Cache**: Remove cached data to start fresh
+
+## How It Works
+
+1. Reads chat list from Gemini's sidebar
+2. Clicks through each chat (in the same tab) to load content
+3. Extracts user prompts and model responses
+4. Caches extracted data in IndexedDB
+5. Creates a ZIP file with all chats
+
+Subsequent exports only fetch new/uncached chats — much faster!
 
 ## Output Format
 
 ### JSON
 ```json
 {
-  "exportedAt": "2026-02-04T...",
-  "totalChats": 50,
-  "chats": [
-    {
-      "title": "Chat Title",
-      "exportedAt": "...",
-      "rawContent": "Full conversation text...",
-      "messages": [...]
-    }
+  "id": "abc123",
+  "title": "Chat Title",
+  "url": "https://gemini.google.com/app/abc123",
+  "exportedAt": "2024-02-04T12:00:00.000Z",
+  "messages": [
+    { "role": "user", "content": "Hello!" },
+    { "role": "model", "content": "Hi there!" }
   ]
 }
 ```
 
 ### Markdown
 ```markdown
-# Gemini Chat Export
+# Chat Title
 
-## Chat Title 1
-[conversation content]
+> Exported: 2024-02-04T12:00:00.000Z
+> URL: https://gemini.google.com/app/abc123
 
 ---
 
-## Chat Title 2
-[conversation content]
+## 👤 User
+
+Hello!
+
+---
+
+## 🤖 Gemini
+
+Hi there!
+
+---
 ```
 
-## Notes
+## License
 
-- Export can take a while if you have many chats (~2-3 seconds per chat)
-- The extension clicks through each chat to load it, so don't interact with the page during export
-- Raw content extraction may not perfectly preserve formatting (Gemini's DOM is complex)
-- For best results, make sure your sidebar shows all chats (scroll to load more if needed)
-
-## Troubleshooting
-
-If the export button doesn't appear:
-1. Refresh the Gemini page
-2. Check that the extension is enabled in `chrome://extensions`
-3. Check the browser console for errors
-
----
-*Created by Bob 🎩 for Daniel*
+MIT
