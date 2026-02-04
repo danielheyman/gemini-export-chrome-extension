@@ -27,7 +27,12 @@
   
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'RUN_EXPORT') {
-      runExport(request.forceRefresh, request.cachedIds || []).then(result => {
+      runExport({
+        forceRefresh: request.forceRefresh,
+        cachedIds: request.cachedIds || [],
+        autoScroll: request.autoScroll,
+        scrollLimit: request.scrollLimit || 100
+      }).then(result => {
         sendResponse(result);
       });
       return true;
@@ -41,9 +46,49 @@
     }).catch(() => {});
   }
   
-  async function runExport(forceRefresh, cachedIds) {
+  async function runExport(opts) {
+    const { forceRefresh, cachedIds, autoScroll, scrollLimit } = opts;
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     const cachedSet = new Set(cachedIds);
+    
+    // Auto-scroll the sidebar to load more chats
+    async function scrollSidebar(limit) {
+      const sidenav = document.querySelector('bard-sidenav, side-navigation-v2');
+      if (!sidenav) return;
+      
+      // Find the scrollable container within sidenav
+      const scrollContainer = sidenav.querySelector('[style*="overflow"]') || 
+                              sidenav.querySelector('.chat-history') ||
+                              sidenav;
+      
+      let prevCount = 0;
+      let sameCountStreak = 0;
+      
+      while (true) {
+        const currentCount = getChatLinks().length;
+        sendProgress(0, 0, `Scrolling... Found ${currentCount} chats (limit: ${limit})`);
+        
+        if (currentCount >= limit) {
+          sendProgress(0, 0, `Reached limit of ${limit} chats`);
+          break;
+        }
+        
+        if (currentCount === prevCount) {
+          sameCountStreak++;
+          if (sameCountStreak >= 3) {
+            sendProgress(0, 0, `No more chats to load (found ${currentCount})`);
+            break;
+          }
+        } else {
+          sameCountStreak = 0;
+        }
+        prevCount = currentCount;
+        
+        // Scroll down
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        await sleep(800);
+      }
+    }
     
     function getChatLinks() {
       const sidenav = document.querySelector('bard-sidenav, side-navigation-v2');
@@ -118,6 +163,11 @@
     }
     
     sendProgress(0, 0, 'Finding chats...');
+    
+    // Auto-scroll if enabled
+    if (autoScroll) {
+      await scrollSidebar(scrollLimit);
+    }
     
     const chatLinks = getChatLinks();
     

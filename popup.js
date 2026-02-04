@@ -4,21 +4,38 @@ const exportBtn = document.getElementById('exportBtn');
 const clearCacheBtn = document.getElementById('clearCacheBtn');
 const formatSelect = document.getElementById('format');
 const forceRefreshCheckbox = document.getElementById('forceRefresh');
+const autoScrollCheckbox = document.getElementById('autoScroll');
+const scrollLimitGroup = document.getElementById('scrollLimitGroup');
+const scrollLimitInput = document.getElementById('scrollLimit');
 const statusDiv = document.getElementById('status');
 const statusText = document.getElementById('statusText');
 const progressBar = document.getElementById('progressBar');
 const cacheInfo = document.getElementById('cacheInfo');
 
-// Load saved format preference
-chrome.storage.local.get(['exportFormat'], (result) => {
-  if (result.exportFormat) {
-    formatSelect.value = result.exportFormat;
+// Load saved preferences
+chrome.storage.local.get(['exportFormat', 'autoScroll', 'scrollLimit'], (result) => {
+  if (result.exportFormat) formatSelect.value = result.exportFormat;
+  if (result.autoScroll) {
+    autoScrollCheckbox.checked = true;
+    scrollLimitGroup.style.display = 'block';
   }
+  if (result.scrollLimit) scrollLimitInput.value = result.scrollLimit;
 });
 
 // Save format preference
 formatSelect.addEventListener('change', () => {
   chrome.storage.local.set({ exportFormat: formatSelect.value });
+});
+
+// Toggle scroll limit visibility
+autoScrollCheckbox.addEventListener('change', () => {
+  scrollLimitGroup.style.display = autoScrollCheckbox.checked ? 'block' : 'none';
+  chrome.storage.local.set({ autoScroll: autoScrollCheckbox.checked });
+});
+
+// Save scroll limit
+scrollLimitInput.addEventListener('change', () => {
+  chrome.storage.local.set({ scrollLimit: parseInt(scrollLimitInput.value) || 100 });
 });
 
 // Load cache stats
@@ -53,7 +70,9 @@ exportBtn.addEventListener('click', async () => {
     action: 'START_EXPORT',
     format: formatSelect.value,
     tabId: tab.id,
-    forceRefresh: forceRefreshCheckbox.checked
+    forceRefresh: forceRefreshCheckbox.checked,
+    autoScroll: autoScrollCheckbox.checked,
+    scrollLimit: parseInt(scrollLimitInput.value) || 100
   });
 });
 

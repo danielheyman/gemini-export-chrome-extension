@@ -67,18 +67,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   if (request.action === 'START_EXPORT') {
     let tabId = request.tabId || sender.tab?.id;
+    const opts = {
+      format: request.format,
+      forceRefresh: request.forceRefresh,
+      autoScroll: request.autoScroll,
+      scrollLimit: request.scrollLimit || 100
+    };
     
     if (!tabId) {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]?.url?.includes('gemini.google.com')) {
-          handleExport(request.format, tabs[0].id, request.forceRefresh);
+          handleExport(opts, tabs[0].id);
         } else {
           exportState.progress.status = 'Error: Open Gemini first';
           broadcastProgress();
         }
       });
     } else {
-      handleExport(request.format, tabId, request.forceRefresh);
+      handleExport(opts, tabId);
     }
     sendResponse({ started: true });
   }
@@ -107,8 +113,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true;
 });
 
-async function handleExport(format = 'json', sourceTabId, forceRefresh = false) {
+async function handleExport(opts, sourceTabId) {
   if (exportState.isExporting) return;
+  
+  const { format = 'json', forceRefresh = false, autoScroll = false, scrollLimit = 100 } = opts;
   
   exportState.isExporting = true;
   exportState.progress = { current: 0, total: 0, status: 'Getting cached data...' };
@@ -128,12 +136,14 @@ async function handleExport(format = 'json', sourceTabId, forceRefresh = false) 
     
     await new Promise(r => setTimeout(r, 500)); // Give it time to initialize
     
-    // Tell content script to run export, passing cached IDs
+    // Tell content script to run export, passing cached IDs and scroll settings
     const result = await new Promise((resolve, reject) => {
       chrome.tabs.sendMessage(sourceTabId, { 
         action: 'RUN_EXPORT', 
         forceRefresh,
-        cachedIds: forceRefresh ? [] : cachedIds
+        cachedIds: forceRefresh ? [] : cachedIds,
+        autoScroll,
+        scrollLimit
       }, (response) => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
