@@ -54,12 +54,29 @@
     // Auto-scroll the sidebar to load more chats
     async function scrollSidebar(limit) {
       const sidenav = document.querySelector('bard-sidenav, side-navigation-v2');
-      if (!sidenav) return;
+      if (!sidenav) {
+        sendProgress(0, 0, 'Error: Could not find sidebar');
+        return;
+      }
       
-      // Find the scrollable container within sidenav
-      const scrollContainer = sidenav.querySelector('[style*="overflow"]') || 
-                              sidenav.querySelector('.chat-history') ||
-                              sidenav;
+      // Find scrollable container - try multiple approaches
+      let scrollContainer = null;
+      
+      // Method 1: Find element with scrollable content
+      const candidates = sidenav.querySelectorAll('*');
+      for (const el of candidates) {
+        if (el.scrollHeight > el.clientHeight && el.clientHeight > 100) {
+          scrollContainer = el;
+          break;
+        }
+      }
+      
+      // Method 2: Fallback to sidenav itself
+      if (!scrollContainer) {
+        scrollContainer = sidenav;
+      }
+      
+      sendProgress(0, 0, `Found scroll container, starting scroll...`);
       
       let prevCount = 0;
       let sameCountStreak = 0;
@@ -75,7 +92,7 @@
         
         if (currentCount === prevCount) {
           sameCountStreak++;
-          if (sameCountStreak >= 3) {
+          if (sameCountStreak >= 5) {
             sendProgress(0, 0, `No more chats to load (found ${currentCount})`);
             break;
           }
@@ -84,9 +101,17 @@
         }
         prevCount = currentCount;
         
-        // Scroll down
+        // Try multiple scroll methods
         scrollContainer.scrollTop = scrollContainer.scrollHeight;
-        await sleep(800);
+        scrollContainer.scrollBy(0, 500);
+        
+        // Also try scrolling last chat into view
+        const chats = getChatLinks();
+        if (chats.length > 0) {
+          chats[chats.length - 1].element?.scrollIntoView({ behavior: 'instant', block: 'end' });
+        }
+        
+        await sleep(1000);
       }
     }
     
