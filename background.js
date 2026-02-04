@@ -180,20 +180,11 @@ async function handleExport(opts, sourceTabId) {
     broadcastProgress();
     
     const zip = new JSZip();
-    const usedNames = new Map(); // Track duplicate filenames
     
     for (const chat of allChats) {
-      let baseName = sanitizeFilename(chat.title);
-      let fileName = baseName;
-      
-      // Handle duplicates by appending a number
-      if (usedNames.has(baseName)) {
-        const count = usedNames.get(baseName) + 1;
-        usedNames.set(baseName, count);
-        fileName = `${baseName}_${count}`;
-      } else {
-        usedNames.set(baseName, 1);
-      }
+      // Use chat_id_title format for uniqueness
+      const safeTitle = sanitizeFilename(chat.title);
+      const fileName = `${chat.id}_${safeTitle}`;
       
       if (format === 'json' || format === 'both') {
         zip.file(`${fileName}.json`, JSON.stringify(chat, null, 2));
