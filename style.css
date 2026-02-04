@@ -1,0 +1,13 @@
+/* Gemini Export - Injected Styles */
+#gemini-export-btn:active {
+  transform: scale(0.98);
+}
+
+#gemini-export-status {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
