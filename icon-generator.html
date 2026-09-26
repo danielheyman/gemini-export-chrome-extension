@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Gemini Export Icon Generator</title>
+  <style>
+    body { margin: 0; padding: 20px; background: #f0f0f0; }
+    .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 20%;
+      background: linear-gradient(135deg, #4285f4 0%, #8b5cf6 50%, #ec4899 100%);
+      color: white;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-weight: bold;
+      margin: 10px;
+    }
+    .icon-128 { width: 128px; height: 128px; font-size: 64px; }
+    .icon-48 { width: 48px; height: 48px; font-size: 24px; }
+    .icon-16 { width: 16px; height: 16px; font-size: 9px; }
+    .icon::before {
+      content: "📥";
+    }
+  </style>
+</head>
+<body>
+  <div class="icon icon-128"></div>
+  <div class="icon icon-48"></div>
+  <div class="icon icon-16"></div>
+  <p>Emoji previews; use the generated canvases below for the extension icons.</p>
+
+  <h3>Generated canvases:</h3>
+  <canvas id="c128" width="128" height="128"></canvas>
+  <canvas id="c48" width="48" height="48"></canvas>
+  <canvas id="c16" width="16" height="16"></canvas>
+
+  <script>
+    function drawIcon(canvas) {
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+      const radius = size * 0.2;
+
+      // Rounded rect with gradient
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#4285f4');
+      gradient.addColorStop(0.5, '#8b5cf6');
+      gradient.addColorStop(1, '#ec4899');
+
+      ctx.beginPath();
+      ctx.roundRect(0, 0, size, size, radius);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      // Download arrow
+      ctx.strokeStyle = 'white';
+      ctx.fillStyle = 'white';
+      ctx.lineWidth = size * 0.08;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const cx = size / 2;
+      const arrowTop = size * 0.2;
+      const arrowBottom = size * 0.6;
+      const arrowWidth = size * 0.2;
+
+      // Vertical line
+      ctx.beginPath();
+      ctx.moveTo(cx, arrowTop);
+      ctx.lineTo(cx, arrowBottom);
+      ctx.stroke();
+
+      // Arrow head
+      ctx.beginPath();
+      ctx.moveTo(cx - arrowWidth, arrowBottom - arrowWidth);
+      ctx.lineTo(cx, arrowBottom);
+      ctx.lineTo(cx + arrowWidth, arrowBottom - arrowWidth);
+      ctx.stroke();
+
+      // Tray
+      const trayY = size * 0.75;
+      const trayWidth = size * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(cx - trayWidth/2, trayY - size*0.1);
+      ctx.lineTo(cx - trayWidth/2, trayY);
+      ctx.lineTo(cx + trayWidth/2, trayY);
+      ctx.lineTo(cx + trayWidth/2, trayY - size*0.1);
+      ctx.stroke();
+    }
+
+    drawIcon(document.getElementById('c128'));
+    drawIcon(document.getElementById('c48'));
+    drawIcon(document.getElementById('c16'));
+
+    // Download helper
+    function download(canvas, name) {
+      const link = document.createElement('a');
+      link.download = name;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+  </script>
+
+  <br><br>
+  <button onclick="download(document.getElementById('c128'), 'icon128.png')">Download 128px</button>
+  <button onclick="download(document.getElementById('c48'), 'icon48.png')">Download 48px</button>
+  <button onclick="download(document.getElementById('c16'), 'icon16.png')">Download 16px</button>
+</body>
+</html>
